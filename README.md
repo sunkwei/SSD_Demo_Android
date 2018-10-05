@@ -33,6 +33,7 @@
 
     data, img = data.transforms.presets.ssd.load_test("P9297176.JPG", short=512)
     r = net(data)
+    net.export("ssd_mobile_voc")    # 生成 ssd_mobile_voc-symbol.json 和 ssd_mobile_voc-0000.params
 
     classnames = net.classes
     catalogs, scores, boxes = r
@@ -51,3 +52,4 @@
     cv2.imshow("debug", img)
     cv2.waitKey(0)
 
+将生成的 .json 和 .params 放到 assets 目录中

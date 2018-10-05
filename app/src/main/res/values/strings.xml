@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">SSD_demo</string>
+    <string name="capture">Capture</string>
+    <string name="detect">Detect</string>
 </resources>

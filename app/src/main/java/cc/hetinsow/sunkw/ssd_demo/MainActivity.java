@@ -2,8 +2,6 @@ package cc.hetinsow.sunkw.ssd_demo;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ClipData;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -25,11 +23,11 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+
 import org.dmlc.mxnet.Predictor;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -39,12 +37,12 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int MY_CAMERA_PERMISSION_CODE = 100;
     private static final int CAMERA_REQUEST = 1888;
-    private ImageView image_view;
-    private Predictor predictor_;
+    private ShowResultView image_view_ = null;
+    private Predictor predictor_ = null;
     private Bitmap curr_img_ = null;
     private float threshold_ = 0.2f;     // SSD mobilenet1.0 voc
-    private String curr_photo_path = null;
-    private ArrayList<String> labels = null;
+    private String curr_photo_path_ = null;
+    private ArrayList<String> labels_ = new ArrayList<>();
 
 //    private int WIDTH = 512;
 //    private int HEIGHT = 512;
@@ -68,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
 
         predictor_ = init_predictor();
 
-        this.image_view = (ImageView)this.findViewById(R.id.image_view);
+        this.image_view_ = (ShowResultView) this.findViewById(R.id.image_view);
 
 
         Button button_capture = (Button)this.findViewById(R.id.button_capture);
@@ -92,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     File newFile = new File(imagePath, "default_image.jpg");
                     final Uri contentUri = FileProvider.getUriForFile(getBaseContext(), getPackageName()+".fileprovider", newFile);
-                    curr_photo_path = newFile.getAbsolutePath();
+                    curr_photo_path_ = newFile.getAbsolutePath();
 
                     cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, contentUri);
                     startActivityForResult(cameraIntent, CAMERA_REQUEST);
@@ -100,45 +98,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        final Activity act = this;
         Button button_detect = (Button)this.findViewById(R.id.button_Detect);
         button_detect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(act, "begin detecting ...", Toast.LENGTH_LONG).show();
-                Bitmap img = curr_img_;
-                ArrayList<ActionBox> acts = do_detect(img);
-                Toast.makeText(act, "OK", Toast.LENGTH_LONG).show();
-
-                // 将框框画到 img 上
-                Bitmap show_img = img.copy(Bitmap.Config.ARGB_8888, true);
-                Canvas canvas = new Canvas(show_img);
-
-                Paint p = new Paint();
-                p.setColor(Color.RED);
-                p.setStrokeWidth(10.0f);
-                p.setStyle(Paint.Style.STROKE);
-                p.setTextSize(100.f);
-
-                int width = img.getWidth();
-                int height = img.getHeight();
-
-                for (ActionBox act: acts) {
-                    int x1 = (int)(act.x1 * width);
-                    int y1 = (int)(act.y1 * height);
-                    int x2 = (int)(act.x2 * width);
-                    int y2 = (int)(act.y2 * height);
-
-                    Rect r = new Rect();
-                    r.set(x1, y1, x2, y2);
-
-                    canvas.drawRect(r, p);
-                    if (act.title != null) {
-                        canvas.drawText(act.title, act.x1 * width, act.y1 * height, p);
-                    }
+                Toast.makeText(getBaseContext(), "begin detecting ...", Toast.LENGTH_LONG).show();
+                if (curr_img_ == null) {
+                    Toast.makeText(getBaseContext(), "to capture first!!", Toast.LENGTH_LONG).show();
+                    return;
                 }
+                ArrayList<ActionBox> acts = do_detect(curr_img_);
+                Toast.makeText(getBaseContext(), "OK", Toast.LENGTH_LONG).show();
 
-                image_view.setImageBitmap(show_img);
+                image_view_.set_action_boxes(acts);
+//                Bitmap img = draw_actions(acts, curr_img_);
+//                image_view_.setImageBitmap(img);
             }
         });
     }
@@ -147,9 +121,33 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == CAMERA_REQUEST && resultCode == Activity.RESULT_OK) {
-            Bitmap photo = BitmapFactory.decodeFile(curr_photo_path);
-            this.image_view.setImageBitmap(photo);
-            this.curr_img_ = photo;
+            Bitmap photo = BitmapFactory.decodeFile(curr_photo_path_);
+
+            // FIXME: 照理说, 这部分应该从 ShowResultView 获取目标大小 ...
+            // scale img
+            int view_width = this.image_view_.getWidth();
+            int view_height = this.image_view_.getHeight();
+            float view_aspect = 1.0f * view_width / view_height;
+
+            int bmp_width = photo.getWidth();
+            int bmp_height = photo.getHeight();
+            float bmp_aspect = 1.0f * bmp_width / bmp_height;
+
+            float scale;
+            if (bmp_aspect >= view_aspect) {
+                scale = 1.0f * bmp_width / view_width;
+            }
+            else {
+                scale = 1.0f * bmp_height / view_height;
+            }
+
+            bmp_width = (int)(bmp_width / scale);
+            bmp_height = (int)(bmp_height / scale);
+
+            // 根据 image_view_ 大小, 设置目标
+            photo = Bitmap.createScaledBitmap(photo, bmp_width, bmp_height, false);
+            this.curr_img_ = photo.copy(Bitmap.Config.ARGB_8888, true);
+            this.image_view_.set_bitmap(this.curr_img_);
         }
     }
 
@@ -203,35 +201,19 @@ public class MainActivity extends AppCompatActivity {
                 0.229f, 0.224f, 0.225f);
     }
 
-    class ActionBox {
-        public int catalog;
-        public float score;
-        public float x1, y1;
-        public float x2, y2;
-        public String title;
-
-        public ActionBox(int catalog, String title, float score, float x1, float y1, float x2, float y2)
-        {
-            this.catalog = catalog;
-            this.title = title;
-            this.score = score;
-            this.x1 = x1;
-            this.x2 = x2;
-            this.y1 = y1;
-            this.y2 = y2;
-        }
-    };
 
     private ArrayList<String> load_voc_labels()
     {
-        ArrayList<String> labels = new ArrayList<>();
+        labels_.clear();
         try {
             InputStream f = getAssets().open("voc.txt");
             BufferedReader reader = new BufferedReader(new InputStreamReader(f));
 
             String line;
+            int n = 0;
             while ((line = reader.readLine()) != null) {
-                labels.add(line);
+                labels_.add(line);
+                n += 1;
             }
 
             reader.close();
@@ -241,7 +223,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        return labels;
+        return labels_;
     }
 
     private ArrayList<ActionBox> do_detect(Bitmap img) {
@@ -265,8 +247,8 @@ public class MainActivity extends AppCompatActivity {
             if (scores[i] < threshold_) continue;
 
             String title = "unk";
-            if (catalog < this.labels.size()) {
-                title = this.labels.get(catalog);
+            if (catalog < this.labels_.size()) {
+                title = this.labels_.get(catalog);
             }
 
             ActionBox act = new ActionBox(catalog, title,
@@ -298,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private Predictor init_predictor() {
-        this.labels = load_voc_labels();
+        this.labels_ = load_voc_labels();
 
         byte []sym_buf = this.load_file_content(sym_fname);
         byte []par_buf = this.load_file_content(par_fname);

@@ -13,11 +13,13 @@
         android:orientation="vertical"
         android:visibility="visible">
 
-        <ImageView
+        <cc.hetinsow.sunkw.ssd_demo.ShowResultView
             android:id="@+id/image_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"/>
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:scaleType="centerInside"
+        />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -28,14 +30,16 @@
                 android:id="@+id/button_capture"
                 android:layout_width="195dp"
                 android:layout_height="wrap_content"
-                android:text="Capture" />
+                android:text="@string/capture"
+                tools:ignore="ButtonStyle" />
 
             <Button
                 android:id="@+id/button_Detect"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Detect" />
+                android:text="@string/detect"
+                tools:ignore="ButtonStyle" />
         </LinearLayout>
 
     </LinearLayout>

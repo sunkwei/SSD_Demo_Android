@@ -2,6 +2,8 @@ package cc.hetinsow.sunkw.ssd_demo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
@@ -14,7 +16,10 @@ import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
+import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -32,6 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -68,53 +74,88 @@ public class MainActivity extends AppCompatActivity {
 
         this.image_view_ = (ShowResultView) this.findViewById(R.id.image_view);
 
+        // 需要的权限
+        ArrayList<String> permissions = new ArrayList<>();
 
-        Button button_capture = (Button)this.findViewById(R.id.button_capture);
-        button_capture.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(new String[]{Manifest.permission.CAMERA}, MY_CAMERA_PERMISSION_CODE);
+        if (!check_permission(this, Manifest.permission.CAMERA)) {
+            permissions.add(Manifest.permission.CAMERA);
+        }
+
+        if (!check_permission(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE);
+        }
+
+        if (!check_permission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        }
+
+        if (permissions.size() > 0) {
+            open_permission(this, permissions, 101);
+        }
+    }
+
+    private boolean check_permission(Context context, String permission)
+    {
+        try {
+            if (PermissionChecker.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+        }
+        catch (Exception ignored) {}
+        return false;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case 101:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "permission granted", Toast.LENGTH_LONG).show();
                 }
                 else {
-                    Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-
-                    //ClipData clip;
-                    //clip = ClipData.newUri(getContentResolver(), "A Photo", contentUri);
-                    //cameraIntent.setClipData(clip);
-                    //cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
-                    File imagePath = new File(Environment.getExternalStorageDirectory(), "images");
-                    if (!imagePath.exists()) {
-                        imagePath.mkdirs();
-                    }
-                    File newFile = new File(imagePath, "default_image.jpg");
-                    final Uri contentUri = FileProvider.getUriForFile(getBaseContext(), getPackageName()+".fileprovider", newFile);
-                    curr_photo_path_ = newFile.getAbsolutePath();
-
-                    cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, contentUri);
-                    startActivityForResult(cameraIntent, CAMERA_REQUEST);
+                    Toast.makeText(this, "permission denied", Toast.LENGTH_LONG).show();
                 }
-            }
-        });
+        }
+    }
 
-        Button button_detect = (Button)this.findViewById(R.id.button_Detect);
-        button_detect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Toast.makeText(getBaseContext(), "begin detecting ...", Toast.LENGTH_LONG).show();
-                if (curr_img_ == null) {
-                    Toast.makeText(getBaseContext(), "to capture first!!", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                ArrayList<ActionBox> acts = do_detect(curr_img_);
-                Toast.makeText(getBaseContext(), "OK", Toast.LENGTH_LONG).show();
+    private void open_permission(Activity activity, List<String> ps, int requestcode) {
+        try {
+            String []permissions = new String[ps.size()];
+            permissions = ps.toArray(permissions);
+            requestPermissions(permissions, requestcode);
+        }
+        catch (Exception ignored) {}
+    }
 
-                image_view_.set_action_boxes(acts);
-//                Bitmap img = draw_actions(acts, curr_img_);
-//                image_view_.setImageBitmap(img);
-            }
-        });
+    void btnCaptureClick(View v)
+    {
+        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+
+        File imagePath = new File(Environment.getExternalStorageDirectory(), "images");
+        if (!imagePath.exists()) {
+            imagePath.mkdirs();
+        }
+
+        File newFile = new File(imagePath, "default_image.jpg");
+        final Uri contentUri = FileProvider.getUriForFile(getBaseContext(), getPackageName()+".fileprovider", newFile);
+        curr_photo_path_ = newFile.getAbsolutePath();
+
+        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, contentUri);
+        startActivityForResult(cameraIntent, CAMERA_REQUEST);
+    }
+
+    void btnDetectClick(View v)
+    {
+        Toast.makeText(getBaseContext(), "begin detecting ...", Toast.LENGTH_LONG).show();
+        if (curr_img_ == null) {
+            Toast.makeText(getBaseContext(), "to capture first!!", Toast.LENGTH_LONG).show();
+            return;
+        }
+        ArrayList<ActionBox> acts = do_detect(curr_img_);
+        Toast.makeText(getBaseContext(), "OK", Toast.LENGTH_LONG).show();
+
+        image_view_.set_action_boxes(acts);
     }
 
     @Override
@@ -295,20 +336,5 @@ public class MainActivity extends AppCompatActivity {
         input_nodes[0] = new Predictor.InputNode("data", input_shape);
 
         return new Predictor(sym_buf, par_buf, new Predictor.Device(Predictor.Device.Type.CPU, 0), input_nodes);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == MY_CAMERA_PERMISSION_CODE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "camera permission granted", Toast.LENGTH_LONG).show();
-                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(cameraIntent, CAMERA_REQUEST);
-            }
-            else {
-                Toast.makeText(this, "camera permission denied", Toast.LENGTH_LONG).show();
-            }
-        }
     }
 }

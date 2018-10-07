@@ -53,3 +53,7 @@
     cv2.waitKey(0)
 
 将生成的 .json 和 .params 放到 assets 目录中
+
+## 运行实例
+![Alt text](test1.jpg)
+![Alt text](test2.jpg)

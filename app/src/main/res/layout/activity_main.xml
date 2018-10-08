@@ -28,17 +28,26 @@
 
             <Button
                 android:id="@+id/button_capture"
-                android:layout_width="195dp"
+                android:layout_weight="1"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/capture"
                 android:onClick="btnCaptureClick"
+                android:text="@string/capture"
                 tools:ignore="ButtonStyle" />
 
             <Button
-                android:id="@+id/button_Detect"
-                android:layout_width="0dp"
+                android:id="@+id/button_auto"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_width="0dp"
+                android:onClick="btnAutoClick"
+                android:text="Auto" />
+
+            <Button
+                android:id="@+id/button_Detect"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_width="0dp"
                 android:text="@string/detect"
                 android:onClick="btnDetectClick"
                 tools:ignore="ButtonStyle" />

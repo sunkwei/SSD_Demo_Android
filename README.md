@@ -1,6 +1,8 @@
  # SSD_Demo_Android
 基于 mxnet, 实现 ssd demo for android
 
+感谢来自 [botyourbusiness](https://github.com/botyourbusiness/android-camera2-secret-picture-taker) , 从中引用了代码用于实现周期获取摄像头图片.
+
 ## 准备
 需要编译 openblas, mxnet amalgamation, 参见 [https://github.com/apache/incubator-mxnet/tree/master/amalgamation]
 

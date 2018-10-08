@@ -5,7 +5,7 @@ android {
     defaultConfig {
         applicationId "cc.hetinsow.sunkw.ssd_demo"
         minSdkVersion 23
-        targetSdkVersion 26
+        targetSdkVersion 23
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
@@ -20,6 +20,10 @@ android {
     lintOptions {
         checkReleaseBuilds false
         abortOnError false
+    }
+    compileOptions {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
     }
 }
 

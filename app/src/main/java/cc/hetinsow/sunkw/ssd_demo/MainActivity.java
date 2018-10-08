@@ -29,6 +29,10 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 
+import com.hzitoun.camera2SecretPictureTaker.listeners.PictureCapturingListener;
+import com.hzitoun.camera2SecretPictureTaker.services.APictureCapturingService;
+import com.hzitoun.camera2SecretPictureTaker.services.PictureCapturingServiceImpl;
+
 import org.dmlc.mxnet.Predictor;
 
 import java.io.BufferedReader;
@@ -38,8 +42,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements PictureCapturingListener {
 
     private static final int MY_CAMERA_PERMISSION_CODE = 100;
     private static final int CAMERA_REQUEST = 1888;
@@ -49,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
     private float threshold_ = 0.2f;     // SSD mobilenet1.0 voc
     private String curr_photo_path_ = null;
     private ArrayList<String> labels_ = new ArrayList<>();
+    private APictureCapturingService take_photo_ = null;
 
 //    private int WIDTH = 512;
 //    private int HEIGHT = 512;
@@ -92,6 +98,8 @@ public class MainActivity extends AppCompatActivity {
         if (permissions.size() > 0) {
             open_permission(this, permissions, 101);
         }
+
+        take_photo_ = PictureCapturingServiceImpl.getInstance(this);
     }
 
     private boolean check_permission(Context context, String permission)
@@ -156,6 +164,26 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(getBaseContext(), "OK", Toast.LENGTH_LONG).show();
 
         image_view_.set_action_boxes(acts);
+    }
+
+
+    @Override
+    public void onCaptureDone(String pictureUrl, byte[] pictureData) {
+
+    }
+
+    @Override
+    public void onDoneCapturingAllPhotos(TreeMap<String, byte[]> picturesTaken) {
+        Button me = findViewById(R.id.button_auto);
+        me.setEnabled(true);
+    }
+
+
+    void btnAutoClick(View v)
+    {
+        take_photo_.startCapturing(this);
+        Button me = findViewById(R.id.button_auto);
+        me.setEnabled(false);
     }
 
     @Override
